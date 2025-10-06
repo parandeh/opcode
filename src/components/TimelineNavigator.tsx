@@ -40,6 +40,10 @@ interface TimelineNavigatorProps {
    * Callback when a new checkpoint is created
    */
   onCheckpointCreated?: () => void;
+  /**
+   * Callback to scroll to a specific message index in the session
+   */
+  onScrollToMessage?: (messageIndex: number) => void;
   className?: string;
 }
 
@@ -51,10 +55,11 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
   projectId,
   projectPath,
   currentMessageIndex,
-  onCheckpointSelect,
+  onCheckpointSelect: _onCheckpointSelect,
   onFork,
   refreshVersion = 0,
   onCheckpointCreated,
+  onScrollToMessage,
   className
 }) => {
   const [timeline, setTimeline] = useState<SessionTimeline | null>(null);
@@ -152,43 +157,10 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
     }
   };
 
-  const handleRestoreCheckpoint = async (checkpoint: Checkpoint) => {
-    if (!confirm(`Restore to checkpoint "${checkpoint.description || checkpoint.id.slice(0, 8)}"? Current state will be saved as a new checkpoint.`)) {
-      return;
-    }
-
-    try {
-      setIsLoading(true);
-      setError(null);
-      
-      const checkpointTime = new Date(checkpoint.timestamp).getTime();
-      const timeSinceCheckpoint = Date.now() - checkpointTime;
-      
-      // First create a checkpoint of current state
-      await api.createCheckpoint(
-        sessionId,
-        projectId,
-        projectPath,
-        currentMessageIndex,
-        "Auto-save before restore"
-      );
-      
-      // Then restore
-      await api.restoreCheckpoint(checkpoint.id, sessionId, projectId, projectPath);
-      
-      // Track checkpoint restoration
-      trackEvent.checkpointRestored({
-        checkpoint_id: checkpoint.id,
-        time_since_checkpoint_ms: timeSinceCheckpoint
-      });
-      
-      await loadTimeline();
-      onCheckpointSelect(checkpoint);
-    } catch (err) {
-      console.error("Failed to restore checkpoint:", err);
-      setError("Failed to restore checkpoint");
-    } finally {
-      setIsLoading(false);
+  const handleScrollToCheckpoint = (checkpoint: Checkpoint) => {
+    if (onScrollToMessage) {
+      console.log("handleScrollTochex", checkpoint);
+      onScrollToMessage(checkpoint.messageIndex);
     }
   };
 
@@ -346,13 +318,13 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
                           className="h-7 w-7"
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleRestoreCheckpoint(node.checkpoint);
+                            handleScrollToCheckpoint(node.checkpoint);
                           }}
                         >
                           <RotateCcw className="h-3 w-3" />
                         </Button>
                       </TooltipTrigger>
-                      <TooltipContent>Restore to this checkpoint</TooltipContent>
+                      <TooltipContent>Scroll to this checkpoint</TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                   
@@ -362,7 +334,7 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-7 w-7"
+                          className="h-7 w-7 hidden"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleFork(node.checkpoint);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useImperativeHandle, forwardRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Copy,
@@ -30,6 +30,10 @@ import type { ClaudeStreamMessage } from "./AgentExecution";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useTrackEvent, useComponentMetrics, useWorkflowTracking } from "@/hooks";
 import { SessionPersistenceService } from "@/services/sessionPersistence";
+
+export interface ClaudeCodeSessionRef {
+  scrollToMessage: (messageIndex: number) => void;
+}
 
 interface ClaudeCodeSessionProps {
   /**
@@ -64,17 +68,17 @@ interface ClaudeCodeSessionProps {
 
 /**
  * ClaudeCodeSession component for interactive Claude Code sessions
- * 
+ *
  * @example
  * <ClaudeCodeSession onBack={() => setView('projects')} />
  */
-export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
+export const ClaudeCodeSession = forwardRef<ClaudeCodeSessionRef, ClaudeCodeSessionProps>(({
   session,
   initialProjectPath = "",
   className,
   onStreamingChange,
   onProjectPathChange,
-}) => {
+}, ref) => {
   const [projectPath] = useState(initialProjectPath || session?.project_path || "");
   const [messages, setMessages] = useState<ClaudeStreamMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -235,6 +239,21 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     estimateSize: () => 150, // Estimate, will be dynamically measured
     overscan: 5,
   });
+
+  // Expose scrollToMessage method via ref
+  useImperativeHandle(ref, () => ({
+    scrollToMessage: (messageIndex: number) => {
+      console.log('scrollToMessage called with index:', messageIndex, 'displayableMessages.length:', displayableMessages.length);
+      if (messageIndex >= 0 && messageIndex < displayableMessages.length) {
+        rowVirtualizer.scrollToIndex(messageIndex, {
+          align: 'center',
+          behavior: 'smooth',
+        });
+      } else {
+        console.warn('Invalid messageIndex:', messageIndex, 'displayableMessages.length:', displayableMessages.length);
+      }
+    }
+  }), [rowVirtualizer, displayableMessages.length]);
 
   // Debug logging
   useEffect(() => {
@@ -936,6 +955,21 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
     sessionMetrics.current.checkpointCount += 1;
   };
 
+  const handleScrollToMessage = (messageIndex: number) => {
+    console.log("handleScrollToMessage ", messageIndex);
+    console.log("displayableMessages.length:", displayableMessages.length);
+
+    // Directly use the virtualizer to scroll
+    if (messageIndex >= 0 && messageIndex < displayableMessages.length) {
+      rowVirtualizer.scrollToIndex(messageIndex, {
+        align: 'center',
+        behavior: 'smooth',
+      });
+    } else {
+      console.warn('Invalid messageIndex for scroll:', messageIndex);
+    }
+  };
+
   const handleCancelExecution = async () => {
     if (!claudeSessionId || !isLoading) return;
     
@@ -1623,6 +1657,7 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
                     onCheckpointSelect={handleCheckpointSelect}
                     onFork={handleFork}
                     onCheckpointCreated={handleCheckpointCreated}
+                    onScrollToMessage={handleScrollToMessage}
                     refreshVersion={timelineVersion}
                   />
                 </div>
@@ -1715,4 +1750,4 @@ export const ClaudeCodeSession: React.FC<ClaudeCodeSessionProps> = ({
       </div>
     </TooltipProvider>
   );
-};
+});
