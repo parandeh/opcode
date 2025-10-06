@@ -46,14 +46,36 @@ interface StreamMessageProps {
   className?: string;
   streamMessages: ClaudeStreamMessage[];
   onLinkDetected?: (url: string) => void;
+  isSelected?: boolean;
+  onSelect?: () => void;
 }
 
 /**
  * Component to render a single Claude Code stream message
  */
-const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, className, streamMessages, onLinkDetected }) => {
+const StreamMessageComponent: React.FC<StreamMessageProps> = ({
+  message,
+  className,
+  streamMessages,
+  onLinkDetected,
+  isSelected = false,
+  onSelect
+}) => {
+  console.log("=== DEBUG: StreamMessage component loaded with NEW code ===");
+  console.log("StreamMessage props received:", {
+    messageType: message.type,
+    isSelected,
+    hasOnSelect: !!onSelect,
+    onSelectType: typeof onSelect
+  });
+
   // State to track tool results mapped by tool call ID
   const [toolResults, setToolResults] = useState<Map<string, any>>(new Map());
+
+  // Log when selection props change
+  useEffect(() => {
+    console.log("StreamMessage render - isSelected:", isSelected, "message type:", message.type);
+  }, [isSelected, message.type]);
   
   // Get current theme
   const { theme } = useTheme();
@@ -113,7 +135,22 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
       let renderedSomething = false;
       
       const renderedCard = (
-        <Card className={cn("border-primary/20 bg-primary/5", className)}>
+        <Card
+          className={cn(
+            "border-primary/20 bg-primary/5 cursor-pointer transition-all relative",
+            isSelected && "ring-2 ring-blue-500 ring-offset-2 ring-offset-background",
+            className
+          )}
+          onClick={(e) => {
+            console.log("Assistant Card clicked!", { isSelected, hasOnSelect: !!onSelect });
+            e.stopPropagation();
+            onSelect?.();
+          }}
+        >
+          {/* Blue ribbon indicator */}
+          {isSelected && (
+            <div className="absolute -left-1 top-4 bottom-4 w-1 bg-blue-500 rounded-r-full" />
+          )}
           <CardContent className="p-4">
             <div className="flex items-start gap-3">
               <Bot className="h-5 w-5 text-primary mt-0.5" />
@@ -326,7 +363,22 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
       let renderedSomething = false;
       
       const renderedCard = (
-        <Card className={cn("border-muted-foreground/20 bg-muted/20", className)}>
+        <Card
+          className={cn(
+            "border-muted-foreground/20 bg-muted/20 cursor-pointer transition-all relative",
+            isSelected && "ring-2 ring-blue-500 ring-offset-2 ring-offset-background",
+            className
+          )}
+          onClick={(e) => {
+            console.log("User Card clicked!", { isSelected, hasOnSelect: !!onSelect });
+            e.stopPropagation();
+            onSelect?.();
+          }}
+        >
+          {/* Blue ribbon indicator */}
+          {isSelected && (
+            <div className="absolute -left-1 top-4 bottom-4 w-1 bg-blue-500 rounded-r-full" />
+          )}
           <CardContent className="p-4">
             <div className="flex items-start gap-3">
               <User className="h-5 w-5 text-muted-foreground mt-0.5" />
@@ -638,12 +690,25 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
     // Result message - render with markdown
     if (message.type === "result") {
       const isError = message.is_error || message.subtype?.includes("error");
-      
+
       return (
-        <Card className={cn(
-          isError ? "border-destructive/20 bg-destructive/5" : "border-green-500/20 bg-green-500/5",
-          className
-        )}>
+        <Card
+          className={cn(
+            isError ? "border-destructive/20 bg-destructive/5" : "border-green-500/20 bg-green-500/5",
+            "cursor-pointer transition-all relative",
+            isSelected && "ring-2 ring-blue-500 ring-offset-2 ring-offset-background",
+            className
+          )}
+          onClick={(e) => {
+            console.log("Result Card clicked!", { isSelected, hasOnSelect: !!onSelect });
+            e.stopPropagation();
+            onSelect?.();
+          }}
+        >
+          {/* Blue ribbon indicator */}
+          {isSelected && (
+            <div className="absolute -left-1 top-4 bottom-4 w-1 bg-blue-500 rounded-r-full" />
+          )}
           <CardContent className="p-4">
             <div className="flex items-start gap-3">
               {isError ? (
@@ -719,7 +784,22 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
     // If any error occurs during rendering, show a safe error message
     console.error("Error rendering stream message:", error, message);
     return (
-      <Card className={cn("border-destructive/20 bg-destructive/5", className)}>
+      <Card
+        className={cn(
+          "border-destructive/20 bg-destructive/5 cursor-pointer transition-all relative",
+          isSelected && "ring-2 ring-blue-500 ring-offset-2 ring-offset-background",
+          className
+        )}
+        onClick={(e) => {
+          console.log("Error Card clicked!", { isSelected, hasOnSelect: !!onSelect });
+          e.stopPropagation();
+          onSelect?.();
+        }}
+      >
+        {/* Blue ribbon indicator */}
+        {isSelected && (
+          <div className="absolute -left-1 top-4 bottom-4 w-1 bg-blue-500 rounded-r-full" />
+        )}
         <CardContent className="p-4">
           <div className="flex items-start gap-3">
             <AlertCircle className="h-5 w-5 text-destructive mt-0.5" />
@@ -736,4 +816,6 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({ message, classNa
   }
 };
 
-export const StreamMessage = React.memo(StreamMessageComponent);
+// Temporarily disable memo to debug
+export const StreamMessage = StreamMessageComponent;
+// export const StreamMessage = React.memo(StreamMessageComponent);

@@ -96,7 +96,8 @@ export const ClaudeCodeSession = forwardRef<ClaudeCodeSessionRef, ClaudeCodeSess
   const [showSlashCommandsSettings, setShowSlashCommandsSettings] = useState(false);
   const [forkCheckpointId, setForkCheckpointId] = useState<string | null>(null);
   const [forkSessionName, setForkSessionName] = useState("");
-  
+  const [selectedMessageIndex, setSelectedMessageIndex] = useState<number | null>(null);
+
   // Queued prompts state
   const [queuedPrompts, setQueuedPrompts] = useState<Array<{ id: string; prompt: string; model: "sonnet" | "opus" }>>([]);
   
@@ -1271,6 +1272,12 @@ export const ClaudeCodeSession = forwardRef<ClaudeCodeSessionRef, ClaudeCodeSess
         <AnimatePresence>
           {rowVirtualizer.getVirtualItems().map((virtualItem) => {
             const message = displayableMessages[virtualItem.index];
+            const isSelected = selectedMessageIndex === virtualItem.index;
+            const handleSelect = () => {
+              console.log("ClaudeCodeSession - onSelect clicked, index:", virtualItem.index);
+              setSelectedMessageIndex(selectedMessageIndex === virtualItem.index ? null : virtualItem.index);
+            };
+
             return (
               <motion.div
                 key={virtualItem.key}
@@ -1285,10 +1292,12 @@ export const ClaudeCodeSession = forwardRef<ClaudeCodeSessionRef, ClaudeCodeSess
                   top: virtualItem.start,
                 }}
               >
-                <StreamMessage 
-                  message={message} 
+                <StreamMessage
+                  message={message}
                   streamMessages={messages}
                   onLinkDetected={handleLinkDetected}
+                  isSelected={isSelected}
+                  onSelect={handleSelect}
                 />
               </motion.div>
             );

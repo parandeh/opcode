@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { StreamMessage } from '../StreamMessage';
@@ -24,6 +24,12 @@ export const MessageList: React.FC<MessageListProps> = React.memo(({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const shouldAutoScrollRef = useRef(true);
   const userHasScrolledRef = useRef(false);
+  const [selectedMessageIndex, setSelectedMessageIndex] = useState<number | null>(null);
+
+  // Log state changes
+  useEffect(() => {
+    console.log("selectedMessageIndex changed:", selectedMessageIndex);
+  }, [selectedMessageIndex]);
 
   // Virtual scrolling setup
   const virtualizer = useVirtualizer({
@@ -107,7 +113,19 @@ export const MessageList: React.FC<MessageListProps> = React.memo(({
           {virtualizer.getVirtualItems().map((virtualItem) => {
             const message = messages[virtualItem.index];
             const key = `msg-${virtualItem.index}-${message.type}`;
-            
+
+            const isSelected = selectedMessageIndex === virtualItem.index;
+            const handleSelect = () => {
+              console.log("onSelect clicked - virtualItem:", virtualItem);
+              console.log("Current selectedMessageIndex:", selectedMessageIndex);
+              console.log("virtualItem.index:", virtualItem.index);
+              const newValue = selectedMessageIndex === virtualItem.index ? null : virtualItem.index;
+              console.log("Setting selectedMessageIndex to:", newValue);
+              setSelectedMessageIndex(newValue);
+            };
+
+            console.log("Rendering message", virtualItem.index, "isSelected:", isSelected, "hasOnSelect:", !!handleSelect);
+
             return (
               <motion.div
                 key={key}
@@ -124,10 +142,12 @@ export const MessageList: React.FC<MessageListProps> = React.memo(({
                 }}
               >
                 <div className="px-4 py-2">
-                  <StreamMessage 
+                  <StreamMessage
                     message={message}
                     streamMessages={messages}
                     onLinkDetected={onLinkDetected}
+                    isSelected={isSelected}
+                    onSelect={handleSelect}
                   />
                 </div>
               </motion.div>
