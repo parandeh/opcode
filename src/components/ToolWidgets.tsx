@@ -502,7 +502,7 @@ export const ReadResultWidget: React.FC<{ content: string; filePath?: string }> 
   const language = getLanguage(filePath);
   const { codeContent, startLineNumber } = parseContent(content);
   const lineCount = content.split('\n').filter(line => line.trim()).length;
-  const isLargeFile = lineCount > 20;
+  const isLargeFile = lineCount > 5;
 
   return (
     <div className="rounded-lg overflow-hidden border bg-background w-full">
@@ -572,10 +572,12 @@ export const ReadResultWidget: React.FC<{ content: string; filePath?: string }> 
  * Widget for Glob tool
  */
 export const GlobWidget: React.FC<{ pattern: string; result?: any }> = ({ pattern, result }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+
   // Extract result content if available
   let resultContent = '';
   let isError = false;
-  
+
   if (result) {
     isError = result.is_error || false;
     if (typeof result.content === 'string') {
@@ -592,7 +594,14 @@ export const GlobWidget: React.FC<{ pattern: string; result?: any }> = ({ patter
       }
     }
   }
-  
+
+  // Check if content has more than 5 lines
+  const lines = resultContent.split('\n');
+  const hasMoreThan5Lines = lines.length > 5;
+  const displayContent = hasMoreThan5Lines && !isExpanded
+    ? lines.slice(0, 5).join('\n')
+    : resultContent;
+
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50">
@@ -607,17 +616,35 @@ export const GlobWidget: React.FC<{ pattern: string; result?: any }> = ({ patter
             <span>Searching...</span>
           </div>
         )}
+        {result && hasMoreThan5Lines && (
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="ml-auto flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {isExpanded ? (
+              <ChevronUp className="h-3 w-3" />
+            ) : (
+              <ChevronDown className="h-3 w-3" />
+            )}
+            {isExpanded ? "Collapse" : "Expand"}
+          </button>
+        )}
       </div>
-      
+
       {/* Show result if available */}
       {result && (
         <div className={cn(
           "p-3 rounded-md border text-xs font-mono whitespace-pre-wrap overflow-x-auto",
-          isError 
-            ? "border-red-500/20 bg-red-500/5 text-red-400" 
+          isError
+            ? "border-red-500/20 bg-red-500/5 text-red-400"
             : "border-green-500/20 bg-green-500/5 text-green-300"
         )}>
-          {resultContent || (isError ? "Search failed" : "No matches found")}
+          {displayContent || (isError ? "Search failed" : "No matches found")}
+          {hasMoreThan5Lines && !isExpanded && (
+            <div className="mt-2 text-muted-foreground italic">
+              ... {lines.length - 5} more lines
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -627,15 +654,17 @@ export const GlobWidget: React.FC<{ pattern: string; result?: any }> = ({ patter
 /**
  * Widget for Bash tool
  */
-export const BashWidget: React.FC<{ 
-  command: string; 
+export const BashWidget: React.FC<{
+  command: string;
   description?: string;
   result?: any;
 }> = ({ command, description, result }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+
   // Extract result content if available
   let resultContent = '';
   let isError = false;
-  
+
   if (result) {
     isError = result.is_error || false;
     if (typeof result.content === 'string') {
@@ -652,7 +681,14 @@ export const BashWidget: React.FC<{
       }
     }
   }
-  
+
+  // Check if content has more than 5 lines
+  const lines = resultContent.split('\n');
+  const hasMoreThan5Lines = lines.length > 5;
+  const displayContent = hasMoreThan5Lines && !isExpanded
+    ? lines.slice(0, 5).join('\n')
+    : resultContent;
+
   return (
     <div className="rounded-lg border bg-background overflow-hidden">
       <div className="px-4 py-2 bg-muted/50 flex items-center gap-2 border-b">
@@ -671,21 +707,40 @@ export const BashWidget: React.FC<{
             <span>Running...</span>
           </div>
         )}
+        {/* Show expand/collapse button for results with more than 5 lines */}
+        {result && hasMoreThan5Lines && (
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="ml-auto flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {isExpanded ? (
+              <ChevronUp className="h-3 w-3" />
+            ) : (
+              <ChevronDown className="h-3 w-3" />
+            )}
+            {isExpanded ? "Collapse" : "Expand"}
+          </button>
+        )}
       </div>
       <div className="p-4 space-y-3">
         <code className="text-xs font-mono text-green-400 block">
           $ {command}
         </code>
-        
+
         {/* Show result if available */}
         {result && (
           <div className={cn(
             "mt-3 p-3 rounded-md border text-xs font-mono whitespace-pre-wrap overflow-x-auto",
-            isError 
-              ? "border-red-500/20 bg-red-500/5 text-red-400" 
+            isError
+              ? "border-red-500/20 bg-red-500/5 text-red-400"
               : "border-green-500/20 bg-green-500/5 text-green-300"
           )}>
-            {resultContent || (isError ? "Command failed" : "Command completed")}
+            {displayContent || (isError ? "Command failed" : "Command completed")}
+            {hasMoreThan5Lines && !isExpanded && (
+              <div className="mt-2 text-muted-foreground italic">
+                ... {lines.length - 5} more lines
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -1203,15 +1258,16 @@ export const EditWidget: React.FC<{
  * Widget for Edit tool result - shows a diff view
  */
 export const EditResultWidget: React.FC<{ content: string }> = ({ content }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
   const { theme } = useTheme();
   const syntaxTheme = getClaudeSyntaxTheme(theme);
-  
+
   // Parse the content to extract file path and code snippet
   const lines = content.split('\n');
   let filePath = '';
   const codeLines: { lineNumber: string; code: string }[] = [];
   let inCodeBlock = false;
-  
+
   for (const rawLine of lines) {
     const line = rawLine.replace(/\r$/, '');
     if (line.includes('The file') && line.includes('has been updated')) {
@@ -1235,21 +1291,43 @@ export const EditResultWidget: React.FC<{ content: string }> = ({ content }) => 
     }
   }
 
-  const codeContent = codeLines.map(l => l.code).join('\n');
   const firstNumberedLine = codeLines.find(l => l.lineNumber !== '');
   const startLineNumber = firstNumberedLine ? parseInt(firstNumberedLine.lineNumber) : 1;
   const language = getLanguage(filePath);
 
+  // Check if content has more than 5 lines
+  const totalLines = codeLines.length;
+  const hasMoreThan5Lines = totalLines > 5;
+  const displayCodeLines = hasMoreThan5Lines && !isExpanded
+    ? codeLines.slice(0, 5)
+    : codeLines;
+  const displayCodeContent = displayCodeLines.map(l => l.code).join('\n');
+
   return (
     <div className="rounded-lg border bg-background overflow-hidden">
-      <div className="px-4 py-2 border-b bg-emerald-950/30 flex items-center gap-2">
-        <GitBranch className="h-3.5 w-3.5 text-emerald-500" />
-        <span className="text-xs font-mono text-emerald-400">Edit Result</span>
-        {filePath && (
-          <>
-            <ChevronRight className="h-3 w-3 text-muted-foreground" />
-            <span className="text-xs font-mono text-muted-foreground">{filePath}</span>
-          </>
+      <div className="px-4 py-2 border-b bg-emerald-950/30 flex items-center gap-2 justify-between">
+        <div className="flex items-center gap-2">
+          <GitBranch className="h-3.5 w-3.5 text-emerald-500" />
+          <span className="text-xs font-mono text-emerald-400">Edit Result</span>
+          {filePath && (
+            <>
+              <ChevronRight className="h-3 w-3 text-muted-foreground" />
+              <span className="text-xs font-mono text-muted-foreground">{filePath}</span>
+            </>
+          )}
+        </div>
+        {hasMoreThan5Lines && (
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {isExpanded ? (
+              <ChevronUp className="h-3 w-3" />
+            ) : (
+              <ChevronDown className="h-3 w-3" />
+            )}
+            {isExpanded ? "Collapse" : "Expand"}
+          </button>
         )}
       </div>
       <div className="overflow-x-auto max-h-[440px]">
@@ -1276,8 +1354,13 @@ export const EditResultWidget: React.FC<{ content: string }> = ({ content }) => 
             opacity: 0.5,
           }}
         >
-          {codeContent}
+          {displayCodeContent}
         </SyntaxHighlighter>
+        {hasMoreThan5Lines && !isExpanded && (
+          <div className="px-4 py-2 text-xs text-muted-foreground text-center bg-muted/30 border-t">
+            ... {totalLines - 5} more lines
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1696,33 +1779,55 @@ export const MultiEditWidget: React.FC<{
 /**
  * Widget for displaying MultiEdit tool results with diffs
  */
-export const MultiEditResultWidget: React.FC<{ 
+export const MultiEditResultWidget: React.FC<{
   content: string;
   edits?: Array<{ old_string: string; new_string: string }>;
 }> = ({ content, edits }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+
   // If we have the edits array, show a nice diff view
   if (edits && edits.length > 0) {
+    const hasMoreThan5Edits = edits.length > 5;
+    const displayEdits = hasMoreThan5Edits && !isExpanded
+      ? edits.slice(0, 5)
+      : edits;
+
     return (
       <div className="space-y-3">
-        <div className="flex items-center gap-2 px-3 py-2 bg-green-500/10 rounded-t-md border-b border-green-500/20">
-          <GitBranch className="h-4 w-4 text-green-500" />
-          <span className="text-sm font-medium text-green-600 dark:text-green-400">
-            {edits.length} Changes Applied
-          </span>
+        <div className="flex items-center justify-between gap-2 px-3 py-2 bg-green-500/10 rounded-t-md border-b border-green-500/20">
+          <div className="flex items-center gap-2">
+            <GitBranch className="h-4 w-4 text-green-500" />
+            <span className="text-sm font-medium text-green-600 dark:text-green-400">
+              {edits.length} Changes Applied
+            </span>
+          </div>
+          {hasMoreThan5Edits && (
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {isExpanded ? (
+                <ChevronUp className="h-3 w-3" />
+              ) : (
+                <ChevronDown className="h-3 w-3" />
+              )}
+              {isExpanded ? "Collapse" : "Expand"}
+            </button>
+          )}
         </div>
-        
+
         <div className="space-y-4">
-          {edits.map((edit, index) => {
+          {displayEdits.map((edit, index) => {
             // Split the strings into lines for diff display
             const oldLines = edit.old_string.split('\n');
             const newLines = edit.new_string.split('\n');
-            
+
             return (
               <div key={index} className="border border-border/50 rounded-md overflow-hidden">
                 <div className="px-3 py-1 bg-muted/50 border-b border-border/50">
                   <span className="text-xs font-medium text-muted-foreground">Change {index + 1}</span>
                 </div>
-                
+
                 <div className="font-mono text-xs">
                   {/* Show removed lines */}
                   {oldLines.map((line, lineIndex) => (
@@ -1738,7 +1843,7 @@ export const MultiEditResultWidget: React.FC<{
                       </pre>
                     </div>
                   ))}
-                  
+
                   {/* Show added lines */}
                   {newLines.map((line, lineIndex) => (
                     <div
@@ -1757,11 +1862,16 @@ export const MultiEditResultWidget: React.FC<{
               </div>
             );
           })}
+          {hasMoreThan5Edits && !isExpanded && (
+            <div className="px-4 py-2 text-xs text-muted-foreground text-center bg-muted/30 border rounded-md">
+              ... {edits.length - 5} more changes
+            </div>
+          )}
         </div>
       </div>
     );
   }
-  
+
   // Fallback to simple content display
   return (
     <div className="p-3 bg-muted/50 rounded-md border">
