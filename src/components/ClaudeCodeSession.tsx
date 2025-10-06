@@ -1274,8 +1274,10 @@ export const ClaudeCodeSession = forwardRef<ClaudeCodeSessionRef, ClaudeCodeSess
             const message = displayableMessages[virtualItem.index];
             const isSelected = selectedMessageIndex === virtualItem.index;
             const handleSelect = () => {
-              console.log("ClaudeCodeSession - onSelect clicked, index:", virtualItem.index);
-              setSelectedMessageIndex(selectedMessageIndex === virtualItem.index ? null : virtualItem.index);
+              setSelectedMessageIndex(
+                virtualItem.index   // selection is sticky
+                // selectedMessageIndex === virtualItem.index ? null : virtualItem.index   // selection toggles on/off
+              );
             };
 
             return (

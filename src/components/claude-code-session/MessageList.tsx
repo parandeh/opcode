@@ -26,11 +26,6 @@ export const MessageList: React.FC<MessageListProps> = React.memo(({
   const userHasScrolledRef = useRef(false);
   const [selectedMessageIndex, setSelectedMessageIndex] = useState<number | null>(null);
 
-  // Log state changes
-  useEffect(() => {
-    console.log("selectedMessageIndex changed:", selectedMessageIndex);
-  }, [selectedMessageIndex]);
-
   // Virtual scrolling setup
   const virtualizer = useVirtualizer({
     count: messages.length,
@@ -116,15 +111,10 @@ export const MessageList: React.FC<MessageListProps> = React.memo(({
 
             const isSelected = selectedMessageIndex === virtualItem.index;
             const handleSelect = () => {
-              console.log("onSelect clicked - virtualItem:", virtualItem);
-              console.log("Current selectedMessageIndex:", selectedMessageIndex);
-              console.log("virtualItem.index:", virtualItem.index);
-              const newValue = selectedMessageIndex === virtualItem.index ? null : virtualItem.index;
-              console.log("Setting selectedMessageIndex to:", newValue);
-              setSelectedMessageIndex(newValue);
+              setSelectedMessageIndex(
+                selectedMessageIndex === virtualItem.index ? null : virtualItem.index
+              );
             };
-
-            console.log("Rendering message", virtualItem.index, "isSelected:", isSelected, "hasOnSelect:", !!handleSelect);
 
             return (
               <motion.div
