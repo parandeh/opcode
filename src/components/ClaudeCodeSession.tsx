@@ -243,17 +243,36 @@ export const ClaudeCodeSession = forwardRef<ClaudeCodeSessionRef, ClaudeCodeSess
   // Expose scrollToMessage method via ref
   useImperativeHandle(ref, () => ({
     scrollToMessage: (messageIndex: number) => {
-      console.log('scrollToMessage called with index:', messageIndex, 'displayableMessages.length:', displayableMessages.length);
-      if (messageIndex >= 0 && messageIndex < displayableMessages.length) {
-        rowVirtualizer.scrollToIndex(messageIndex, {
-          align: 'center',
-          behavior: 'smooth',
+      console.log('scrollToMessage (ref) called with index:', messageIndex);
+
+      if (messageIndex < 0 || messageIndex >= messages.length) {
+        console.warn('Invalid messageIndex:', messageIndex, 'messages.length:', messages.length);
+        return;
+      }
+
+      // Find the displayableIndex from messageIndex
+      let displayableIndex = -1;
+      let currentMessageIndex = 0;
+
+      for (let i = 0; i < displayableMessages.length; i++) {
+        while (currentMessageIndex < messages.length && messages[currentMessageIndex] !== displayableMessages[i]) {
+          currentMessageIndex++;
+        }
+        if (currentMessageIndex === messageIndex) {
+          displayableIndex = i;
+          break;
+        }
+        currentMessageIndex++;
+      }
+
+      if (displayableIndex >= 0) {
+        rowVirtualizer.scrollToIndex(displayableIndex, {
+          align: 'start',
+          behavior: 'auto',
         });
-      } else {
-        console.warn('Invalid messageIndex:', messageIndex, 'displayableMessages.length:', displayableMessages.length);
       }
     }
-  }), [rowVirtualizer, displayableMessages.length]);
+  }), [rowVirtualizer, displayableMessages, messages]);
 
   // Debug logging
   useEffect(() => {
@@ -956,17 +975,43 @@ export const ClaudeCodeSession = forwardRef<ClaudeCodeSessionRef, ClaudeCodeSess
   };
 
   const handleScrollToMessage = (messageIndex: number) => {
-    console.log("handleScrollToMessage ", messageIndex);
+    console.log("handleScrollToMessage called with messageIndex:", messageIndex);
     console.log("displayableMessages.length:", displayableMessages.length);
+    console.log("messages.length:", messages.length);
 
-    // Directly use the virtualizer to scroll
-    if (messageIndex >= 0 && messageIndex < displayableMessages.length) {
-      rowVirtualizer.scrollToIndex(messageIndex, {
-        align: 'center',
-        behavior: 'smooth',
+    if (messageIndex < 0 || messageIndex >= messages.length) {
+      console.warn('Invalid messageIndex for scroll:', messageIndex, 'messages.length:', messages.length);
+      return;
+    }
+
+    // Find the index in displayableMessages that corresponds to this message index
+    let displayableIndex = -1;
+    let currentMessageIndex = 0;
+
+    for (let i = 0; i < displayableMessages.length; i++) {
+      // Count through all messages until we find the matching one
+      while (currentMessageIndex < messages.length && messages[currentMessageIndex] !== displayableMessages[i]) {
+        currentMessageIndex++;
+      }
+
+      if (currentMessageIndex === messageIndex) {
+        displayableIndex = i;
+        break;
+      }
+
+      currentMessageIndex++;
+    }
+
+    console.log("Mapped to displayableIndex:", displayableIndex);
+
+    if (displayableIndex >= 0 && displayableIndex < displayableMessages.length) {
+      // Use 'start' align and 'auto' behavior for more reliable scrolling with virtualizer
+      rowVirtualizer.scrollToIndex(displayableIndex, {
+        align: 'start',
+        behavior: 'auto',
       });
     } else {
-      console.warn('Invalid messageIndex for scroll:', messageIndex);
+      console.warn('Could not find displayable message for messageIndex:', messageIndex);
     }
   };
 
