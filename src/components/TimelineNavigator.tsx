@@ -251,7 +251,7 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6 -ml-1"
+              className="h-6 w-6 -ml-1 hidden"
               onClick={() => toggleNodeExpansion(node.checkpoint.id)}
             >
               {isExpanded ? (
@@ -267,15 +267,18 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
             className={cn(
               "flex-1 cursor-pointer transition-all hover:shadow-md",
               isCurrent && "border-primary ring-2 ring-primary/20",
-              isSelected && "border-blue-500 bg-blue-500/5",
-              !hasChildren && "ml-5"
+              isSelected && "border-blue-500 bg-blue-500/5"
             )}
-            onClick={() => setSelectedCheckpoint(node.checkpoint)}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleScrollToCheckpoint(node.checkpoint);
+            }}
+            // onClick={() => setSelectedCheckpoint(node.checkpoint)}
           >
             <CardContent className="p-3">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
+                  <div className="flex items-center gap-2 mb-1 hidden">
                     {isCurrent && (
                       <Badge variant="default" className="text-xs">Current</Badge>
                     )}
@@ -295,7 +298,7 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
                     {node.checkpoint.metadata.userPrompt || "No prompt"}
                   </p>
                   
-                  <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground hidden">
                     <span className="flex items-center gap-1">
                       <Hash className="h-3 w-3" />
                       {node.checkpoint.metadata.totalTokens.toLocaleString()} tokens
@@ -377,13 +380,13 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
             {/* Vertical line for children */}
             {node.children.length > 1 && (
               <div 
-                className="absolute top-0 bottom-0 w-0.5 bg-muted-foreground/30"
+                className="absolute top-0 bottom-0 w-0.5 bg-muted-foreground/30 hidden"
                 style={{ left: `${(depth + 1) * 24 - 1}px` }}
               />
             )}
             
             {node.children.map((child) => 
-              renderTimelineNode(child, depth + 1)
+              renderTimelineNode(child, 0)
             )}
           </div>
         )}
@@ -394,7 +397,7 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
   return (
     <div className={cn("space-y-4", className)}>
       {/* Experimental Feature Warning */}
-      <div className="rounded-lg border border-yellow-500/50 bg-yellow-500/10 p-3">
+      <div className="rounded-lg border border-yellow-500/50 bg-yellow-500/10 p-3 hidden">
         <div className="flex items-start gap-2">
           <AlertCircle className="h-4 w-4 text-yellow-600 mt-0.5" />
           <div className="text-xs">
