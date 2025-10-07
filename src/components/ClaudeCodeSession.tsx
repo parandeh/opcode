@@ -98,6 +98,7 @@ export const ClaudeCodeSession = forwardRef<ClaudeCodeSessionRef, ClaudeCodeSess
   const [forkSessionName, setForkSessionName] = useState("");
   const [selectedMessageIndex, setSelectedMessageIndex] = useState<number | null>(null);
 
+
   // Queued prompts state
   const [queuedPrompts, setQueuedPrompts] = useState<Array<{ id: string; prompt: string; model: "sonnet" | "opus" }>>([]);
   
@@ -233,6 +234,23 @@ export const ClaudeCodeSession = forwardRef<ClaudeCodeSessionRef, ClaudeCodeSess
       return true;
     });
   }, [messages]);
+
+  // Map the selected displayable message index to the raw messages[] index
+  const selectedRawMessageIndex = useMemo(() => {
+    if (selectedMessageIndex == null) return null;
+    if (displayableMessages.length === 0 || messages.length === 0) return null;
+
+    let dIdx = 0;
+    for (let rawIdx = 0; rawIdx < messages.length && dIdx < displayableMessages.length; rawIdx++) {
+      if (messages[rawIdx] === displayableMessages[dIdx]) {
+        if (dIdx === selectedMessageIndex) {
+          return rawIdx;
+        }
+        dIdx++;
+      }
+    }
+    return null;
+  }, [selectedMessageIndex, displayableMessages, messages]);
 
   const rowVirtualizer = useVirtualizer({
     count: displayableMessages.length,
@@ -1709,7 +1727,7 @@ export const ClaudeCodeSession = forwardRef<ClaudeCodeSessionRef, ClaudeCodeSess
                     sessionId={effectiveSession.id}
                     projectId={effectiveSession.project_id}
                     projectPath={projectPath}
-                    currentMessageIndex={messages.length - 1}
+                    currentMessageIndex={selectedRawMessageIndex ?? (messages.length - 1)}
                     onCheckpointSelect={handleCheckpointSelect}
                     onFork={handleFork}
                     onCheckpointCreated={handleCheckpointCreated}

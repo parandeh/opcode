@@ -80,6 +80,7 @@ export const SessionList: React.FC<SessionListProps> = ({
           transition={{ duration: 0.3, delay: 0.1 }}
         >
           <ClaudeMemoriesDropdown
+            className="hidden"
             projectPath={projectPath}
             onEditFile={onEditClaudeFile}
           />
