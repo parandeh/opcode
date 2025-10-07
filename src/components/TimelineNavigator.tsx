@@ -275,7 +275,7 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
             }}
             // onClick={() => setSelectedCheckpoint(node.checkpoint)}
           >
-            <CardContent className="p-3">
+            <CardContent className="p-2">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1 hidden">
@@ -294,7 +294,7 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
                     <p className="text-sm font-medium mb-1">{node.checkpoint.description}</p>
                   )}
                   
-                  <p className="text-xs text-muted-foreground line-clamp-2">
+                  <p className="text-xs text-muted-foreground line-clamp-2 hidden">
                     {node.checkpoint.metadata.userPrompt || "No prompt"}
                   </p>
                   

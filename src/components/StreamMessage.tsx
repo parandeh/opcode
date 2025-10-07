@@ -288,13 +288,18 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({
                       return null;
                     };
                     
+                    if (toolName === "todowrite") { // this will hide the todo blocks
+                      renderedSomething = false;
+                      return null;
+                    }
+
                     // Render the tool widget
                     const widget = renderToolWidget();
                     if (widget) {
                       renderedSomething = true;
                       return <div key={idx}>{widget}</div>;
                     }
-                    
+
                     // Fallback to basic tool display
                     renderedSomething = true;
                     return (
@@ -320,7 +325,7 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({
                 })}
                 
                 {msg.usage && (
-                  <div className="text-xs text-muted-foreground mt-2">
+                  <div className="text-xs text-muted-foreground mt-2 hidden">
                     Tokens: {msg.usage.input_tokens} in, {msg.usage.output_tokens} out
                   </div>
                 )}
