@@ -408,7 +408,7 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
   };
 
   return (
-    <div className={cn("space-y-4", className)}>
+    <div className={cn("h-full flex flex-col space-y-4", className)}>
       {/* Experimental Feature Warning */}
       <div className="rounded-lg border border-yellow-500/50 bg-yellow-500/10 p-3 hidden">
         <div className="flex items-start gap-2">
@@ -423,7 +423,7 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
       </div>
       
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-2">
           <GitBranch className="h-5 w-5 text-muted-foreground" />
           <h3 className="text-sm font-medium">Timeline</h3>
@@ -447,7 +447,7 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
       
       {/* Error display */}
       {error && (
-        <div className="flex items-center gap-2 text-xs text-destructive">
+        <div className="flex items-center gap-2 text-xs text-destructive flex-shrink-0">
           <AlertCircle className="h-3 w-3" />
           {error}
         </div>
@@ -455,11 +455,13 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
       
       {/* Timeline tree */}
       {timeline?.rootNode ? (
-        <div className="relative overflow-x-auto">
+        <div className="relative overflow-x-auto overflow-y-auto flex-1 min-h-0">
           {renderTimelineNode(timeline.rootNode)}
+          {/* Invisible spacer to ensure last item scrolls fully into view */}
+          <div className="h-16 w-full" aria-hidden="true" />
         </div>
       ) : (
-        <div className="text-center py-8 text-sm text-muted-foreground">
+        <div className="text-center py-8 text-sm text-muted-foreground flex-1">
           {isLoading ? "Loading timeline..." : "No checkpoints yet"}
         </div>
       )}
