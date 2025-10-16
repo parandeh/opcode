@@ -158,9 +158,22 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
   };
 
   const handleScrollToCheckpoint = (checkpoint: Checkpoint) => {
+    console.log("handleScrollToCheckpoint called with:", checkpoint);
+    console.log("checkpoint.messageIndex:", checkpoint.messageIndex);
+    console.log("onScrollToMessage function exists:", !!onScrollToMessage);
+    
     if (onScrollToMessage) {
-      console.log("handleScrollTochex", checkpoint);
-      onScrollToMessage(checkpoint.messageIndex);
+      // Validate messageIndex before scrolling
+      if (typeof checkpoint.messageIndex === 'number' && checkpoint.messageIndex >= 0) {
+        console.log("Calling onScrollToMessage with messageIndex:", checkpoint.messageIndex);
+        onScrollToMessage(checkpoint.messageIndex);
+      } else {
+        console.warn('Invalid messageIndex in checkpoint:', checkpoint.messageIndex);
+        // Fallback: try to scroll to index 0 if messageIndex is invalid
+        onScrollToMessage(0);
+      }
+    } else {
+      console.warn('onScrollToMessage function not provided');
     }
   };
 

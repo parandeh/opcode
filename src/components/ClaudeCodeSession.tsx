@@ -994,43 +994,39 @@ export const ClaudeCodeSession = forwardRef<ClaudeCodeSessionRef, ClaudeCodeSess
   };
 
   const handleScrollToMessage = (messageIndex: number) => {
-    console.log("handleScrollToMessage called with messageIndex:", messageIndex);
+    console.log("=== handleScrollToMessage called ===");
+    console.log("messageIndex:", messageIndex);
     console.log("displayableMessages.length:", displayableMessages.length);
     console.log("messages.length:", messages.length);
+    console.log("rowVirtualizer exists:", !!rowVirtualizer);
 
     if (messageIndex < 0 || messageIndex >= messages.length) {
       console.warn('Invalid messageIndex for scroll:', messageIndex, 'messages.length:', messages.length);
       return;
     }
 
-    // Find the index in displayableMessages that corresponds to this message index
-    let displayableIndex = -1;
-    let currentMessageIndex = 0;
-
-    for (let i = 0; i < displayableMessages.length; i++) {
-      // Count through all messages until we find the matching one
-      while (currentMessageIndex < messages.length && messages[currentMessageIndex] !== displayableMessages[i]) {
-        currentMessageIndex++;
-      }
-
-      if (currentMessageIndex === messageIndex) {
-        displayableIndex = i;
-        break;
-      }
-
-      currentMessageIndex++;
-    }
-
+    // FIXED: Find the displayable index directly by comparing message objects
+    const targetMessage = messages[messageIndex];
+    console.log("targetMessage:", targetMessage?.uuid || 'no uuid');
+    
+    const displayableIndex = displayableMessages.findIndex(msg => msg === targetMessage);
     console.log("Mapped to displayableIndex:", displayableIndex);
 
     if (displayableIndex >= 0 && displayableIndex < displayableMessages.length) {
+      console.log("Attempting to scroll to displayableIndex:", displayableIndex);
       // Use 'start' align and 'auto' behavior for more reliable scrolling with virtualizer
-      rowVirtualizer.scrollToIndex(displayableIndex, {
-        align: 'start',
-        behavior: 'auto',
-      });
+      try {
+        rowVirtualizer.scrollToIndex(displayableIndex, {
+          align: 'start',
+          behavior: 'auto',
+        });
+        console.log("Scroll command sent successfully");
+      } catch (error) {
+        console.error("Error during scroll:", error);
+      }
     } else {
       console.warn('Could not find displayable message for messageIndex:', messageIndex);
+      console.log("Available displayable messages:", displayableMessages.map(msg => msg.uuid || 'no uuid'));
     }
   };
 
