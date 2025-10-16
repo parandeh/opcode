@@ -2,6 +2,7 @@
 export { TodoWidget } from './TodoWidget';
 export { LSWidget } from './LSWidget';
 export { BashWidget } from './BashWidget';
+export { TableWidget } from './TableWidget';
 
 // TODO: Add these widgets as they are implemented
 // export { LSResultWidget } from './LSWidget';

@@ -40,6 +40,7 @@ import {
   WebSearchWidget,
   WebFetchWidget
 } from "./ToolWidgets";
+import { TableWidget } from "./widgets";
 
 interface StreamMessageProps {
   message: ClaudeStreamMessage;
@@ -266,7 +267,37 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({
                       // Write tool
                       if (toolName === "write" && input?.file_path && input?.content) {
                         renderedSomething = true;
-                        return <WriteWidget filePath={input.file_path} content={input.content} result={toolResult} />;
+                        
+                        // If file_path matches eval/scenarios/(.*)/input_tasks.json, extract the scenario id/group
+                        let evalScenarioMatch = input.file_path.match(/eval\/scenarios\/([^\/]+)\/input_tasks\.json$/);
+                        let evalScenario = evalScenarioMatch ? evalScenarioMatch[1] : null;
+
+                        if (evalScenario !== null) {
+                          // Parse the JSON content to extract table data
+                          try {
+                            const jsonData = JSON.parse(input.content);
+                            if (jsonData.data && Array.isArray(jsonData.data)) {
+                              const tableData = jsonData.data;
+                              const columns = ['task', 'expected_outcome'];
+                              
+                              return (
+                                <TableWidget
+                                  title={`Created Eval Scenario ${evalScenario}`}
+                                  columns={columns}
+                                  data={tableData}
+                                />
+                              );
+                            } else {
+                              // Fallback to regular WriteWidget if data structure is different
+                              return <WriteWidget filePath={input.file_path} content={input.content} result={toolResult} />;
+                            }
+                          } catch (error) {
+                            // Fallback to regular WriteWidget if JSON parsing fails
+                            return <WriteWidget filePath={input.file_path} content={input.content} result={toolResult} />;
+                          }
+                        } else {
+                          return <WriteWidget filePath={input.file_path} content={input.content} result={toolResult} />;
+                        }
                       }
                       
                       // Grep tool
