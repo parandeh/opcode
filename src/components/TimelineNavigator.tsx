@@ -41,9 +41,17 @@ interface TimelineNavigatorProps {
    */
   onCheckpointCreated?: () => void;
   /**
-   * Callback to scroll to a specific message index in the session
+   * Callback to scroll to a checkpoint and highlight it
    */
-  onScrollToMessage?: (messageIndex: number) => void;
+  onScrollToMessage?: (checkpoint: Checkpoint) => void;
+  /**
+   * ID of the currently highlighted checkpoint
+   */
+  highlightedCheckpointId?: string | null;
+  /**
+   * Callback to clear highlighting
+   */
+  onClearHighlight?: () => void;
   className?: string;
 }
 
@@ -60,6 +68,8 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
   refreshVersion = 0,
   onCheckpointCreated,
   onScrollToMessage,
+  highlightedCheckpointId,
+  onClearHighlight,
   className
 }) => {
   const [timeline, setTimeline] = useState<SessionTimeline | null>(null);
@@ -165,12 +175,10 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
     if (onScrollToMessage) {
       // Validate messageIndex before scrolling
       if (typeof checkpoint.messageIndex === 'number' && checkpoint.messageIndex >= 0) {
-        console.log("Calling onScrollToMessage with messageIndex:", checkpoint.messageIndex);
-        onScrollToMessage(checkpoint.messageIndex);
+        console.log("Calling onScrollToMessage with checkpoint:", checkpoint.id);
+        onScrollToMessage(checkpoint);
       } else {
         console.warn('Invalid messageIndex in checkpoint:', checkpoint.messageIndex);
-        // Fallback: try to scroll to index 0 if messageIndex is invalid
-        onScrollToMessage(0);
       }
     } else {
       console.warn('onScrollToMessage function not provided');
@@ -234,6 +242,7 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
     const hasChildren = node.children.length > 0;
     const isCurrent = timeline?.currentCheckpointId === node.checkpoint.id;
     const isSelected = selectedCheckpoint?.id === node.checkpoint.id;
+    const isHighlighted = highlightedCheckpointId === node.checkpoint.id;
 
     return (
       <div key={node.checkpoint.id} className="relative">
@@ -280,7 +289,8 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
             className={cn(
               "flex-1 cursor-pointer transition-all hover:shadow-md",
               isCurrent && "border-primary ring-2 ring-primary/20",
-              isSelected && "border-blue-500 bg-blue-500/5"
+              isSelected && "border-blue-500 bg-blue-500/5",
+              isHighlighted && "border-amber-500 bg-amber-50 ring-2 ring-amber-500/30"
             )}
             onClick={(e) => {
               e.stopPropagation();

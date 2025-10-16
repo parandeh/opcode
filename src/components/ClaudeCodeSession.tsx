@@ -97,6 +97,11 @@ export const ClaudeCodeSession = forwardRef<ClaudeCodeSessionRef, ClaudeCodeSess
   const [forkCheckpointId, setForkCheckpointId] = useState<string | null>(null);
   const [forkSessionName, setForkSessionName] = useState("");
   const [selectedMessageIndex, setSelectedMessageIndex] = useState<number | null>(null);
+  
+  // Highlighting state for timeline-message synchronization
+  const [highlightedCheckpointId, setHighlightedCheckpointId] = useState<string | null>(null);
+  const [highlightedMessageIndex, setHighlightedMessageIndex] = useState<number | null>(null);
+  const isScrollingProgrammaticallyRef = useRef(false);
 
 
   // Queued prompts state
@@ -434,8 +439,7 @@ export const ClaudeCodeSession = forwardRef<ClaudeCodeSessionRef, ClaudeCodeSess
         
         if (activeSession) {
           // Session is still active, reconnect to its stream
-          console.log('[ClaudeCodeSession] Found active session, reconnecting:', session.id);
-          // IMPORTANT: Set claudeSessionId before reconnecting
+            // IMPORTANT: Set claudeSessionId before reconnecting
           setClaudeSessionId(session.id);
           
           // Don't add buffered messages here - they've already been loaded by loadSessionHistory
@@ -451,11 +455,9 @@ export const ClaudeCodeSession = forwardRef<ClaudeCodeSessionRef, ClaudeCodeSess
   };
 
   const reconnectToSession = async (sessionId: string) => {
-    console.log('[ClaudeCodeSession] Reconnecting to session:', sessionId);
     
     // Prevent duplicate listeners
     if (isListeningRef.current) {
-      console.log('[ClaudeCodeSession] Already listening to session, skipping reconnect');
       return;
     }
     
@@ -994,41 +996,99 @@ export const ClaudeCodeSession = forwardRef<ClaudeCodeSessionRef, ClaudeCodeSess
   };
 
   const handleScrollToMessage = (messageIndex: number) => {
-    console.log("=== handleScrollToMessage called ===");
-    console.log("messageIndex:", messageIndex);
-    console.log("displayableMessages.length:", displayableMessages.length);
-    console.log("messages.length:", messages.length);
-    console.log("rowVirtualizer exists:", !!rowVirtualizer);
-
     if (messageIndex < 0 || messageIndex >= messages.length) {
-      console.warn('Invalid messageIndex for scroll:', messageIndex, 'messages.length:', messages.length);
       return;
     }
 
-    // FIXED: Find the displayable index directly by comparing message objects
+    // Find the displayable index directly by comparing message objects
     const targetMessage = messages[messageIndex];
-    console.log("targetMessage:", targetMessage?.uuid || 'no uuid');
-    
     const displayableIndex = displayableMessages.findIndex(msg => msg === targetMessage);
-    console.log("Mapped to displayableIndex:", displayableIndex);
 
     if (displayableIndex >= 0 && displayableIndex < displayableMessages.length) {
-      console.log("Attempting to scroll to displayableIndex:", displayableIndex);
-      // Use 'start' align and 'auto' behavior for more reliable scrolling with virtualizer
       try {
         rowVirtualizer.scrollToIndex(displayableIndex, {
           align: 'start',
           behavior: 'auto',
         });
-        console.log("Scroll command sent successfully");
       } catch (error) {
         console.error("Error during scroll:", error);
       }
-    } else {
-      console.warn('Could not find displayable message for messageIndex:', messageIndex);
-      console.log("Available displayable messages:", displayableMessages.map(msg => msg.uuid || 'no uuid'));
     }
   };
+
+  const handleScrollToCheckpoint = (checkpoint: Checkpoint) => {
+    // Set highlighting states
+    setHighlightedCheckpointId(checkpoint.id);
+    
+    // Find the displayable message index for highlighting
+    if (checkpoint.messageIndex >= 0 && checkpoint.messageIndex < messages.length) {
+      const targetMessage = messages[checkpoint.messageIndex];
+      const displayableIndex = displayableMessages.findIndex(msg => msg === targetMessage);
+      
+      if (displayableIndex >= 0) {
+        setHighlightedMessageIndex(displayableIndex);
+      } else {
+        setHighlightedMessageIndex(null);
+      }
+    } else {
+      setHighlightedMessageIndex(null);
+    }
+    
+    // Set flag to indicate programmatic scrolling
+    isScrollingProgrammaticallyRef.current = true;
+    
+    // Perform the actual scroll
+    handleScrollToMessage(checkpoint.messageIndex);
+    
+    // Clear the flag after a short delay to allow scroll events to settle
+    setTimeout(() => {
+      isScrollingProgrammaticallyRef.current = false;
+    }, 500);
+  };
+
+  const handleClearHighlight = () => {
+    setHighlightedCheckpointId(null);
+    setHighlightedMessageIndex(null);
+  };
+
+  // Debounced scroll handler with improved clearing logic
+  const handleMessagesScroll = useMemo(() => {
+    let scrollTimeout: NodeJS.Timeout | null = null;
+    
+    return () => {
+      // Clear any existing timeout to debounce the scroll events
+      if (scrollTimeout) {
+        clearTimeout(scrollTimeout);
+      }
+      
+      // Don't clear highlights during programmatic scrolling
+      if (isScrollingProgrammaticallyRef.current) {
+        return;
+      }
+      
+      // Debounce the scroll handler to improve performance
+      scrollTimeout = setTimeout(() => {
+        if (highlightedMessageIndex !== null) {
+          const visibleRange = rowVirtualizer.getVirtualItems();
+          
+          if (visibleRange.length === 0) return;
+          
+          const firstVisibleIndex = visibleRange[0].index;
+          const lastVisibleIndex = visibleRange[visibleRange.length - 1].index;
+          const visibleCenter = Math.floor((firstVisibleIndex + lastVisibleIndex) / 2);
+          
+          // Clear highlight if the highlighted message is significantly far from the center of viewport
+          // This prevents clearing when the message is just at the edge but still partially visible
+          const distanceFromCenter = Math.abs(highlightedMessageIndex - visibleCenter);
+          const clearThreshold = Math.max(5, Math.floor(visibleRange.length / 3)); // At least 5 messages or 1/3 of visible range
+          
+          if (distanceFromCenter > clearThreshold) {
+            handleClearHighlight();
+          }
+        }
+      }, 100); // 100ms debounce delay
+    };
+  }, [highlightedMessageIndex, rowVirtualizer]);
 
   const handleCancelExecution = async () => {
     if (!claudeSessionId || !isLoading) return;
@@ -1275,6 +1335,7 @@ export const ClaudeCodeSession = forwardRef<ClaudeCodeSessionRef, ClaudeCodeSess
       style={{
         contain: 'strict',
       }}
+      onScroll={handleMessagesScroll}
     >
       <div
         className="relative w-full max-w-6xl mx-auto px-4 pt-8 pb-4"
@@ -1287,6 +1348,13 @@ export const ClaudeCodeSession = forwardRef<ClaudeCodeSessionRef, ClaudeCodeSess
           {rowVirtualizer.getVirtualItems().map((virtualItem) => {
             const message = displayableMessages[virtualItem.index];
             const isSelected = selectedMessageIndex === virtualItem.index;
+            const isHighlighted = highlightedMessageIndex === virtualItem.index;
+            
+            // Debug logging for highlighting (only for highlighted item)
+            if (isHighlighted) {
+              console.log(`Highlighted message rendered - virtualItem.index: ${virtualItem.index}`);
+            }
+            
             const handleSelect = () => {
               setSelectedMessageIndex(
                 virtualItem.index   // selection is sticky
@@ -1314,6 +1382,7 @@ export const ClaudeCodeSession = forwardRef<ClaudeCodeSessionRef, ClaudeCodeSess
                   onLinkDetected={handleLinkDetected}
                   isSelected={isSelected}
                   onSelect={handleSelect}
+                  isHighlighted={isHighlighted}
                 />
               </motion.div>
             );
@@ -1727,7 +1796,9 @@ export const ClaudeCodeSession = forwardRef<ClaudeCodeSessionRef, ClaudeCodeSess
                     onCheckpointSelect={handleCheckpointSelect}
                     onFork={handleFork}
                     onCheckpointCreated={handleCheckpointCreated}
-                    onScrollToMessage={handleScrollToMessage}
+                    onScrollToMessage={handleScrollToCheckpoint}
+                    highlightedCheckpointId={highlightedCheckpointId}
+                    onClearHighlight={handleClearHighlight}
                     refreshVersion={timelineVersion}
                   />
                 </div>

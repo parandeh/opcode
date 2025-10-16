@@ -48,6 +48,7 @@ interface StreamMessageProps {
   onLinkDetected?: (url: string) => void;
   isSelected?: boolean;
   onSelect?: () => void;
+  isHighlighted?: boolean;
 }
 
 /**
@@ -59,7 +60,8 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({
   streamMessages,
   onLinkDetected,
   isSelected = false,
-  onSelect
+  onSelect,
+  isHighlighted = false
 }) => {
   // State to track tool results mapped by tool call ID
   const [toolResults, setToolResults] = useState<Map<string, any>>(new Map());
@@ -126,6 +128,7 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({
           className={cn(
             "border-primary/20 bg-primary/5 cursor-pointer transition-all relative",
             isSelected && "border-blue-500 shadow-[0_0_0_1px_rgb(59,130,246),0_0_20px_rgba(59,130,246,0.5)]",
+            isHighlighted && "border-amber-500 bg-amber-50 shadow-[0_0_0_1px_rgb(245,158,11),0_0_20px_rgba(245,158,11,0.4)]",
             className
           )}
           onClick={(e) => {
@@ -354,6 +357,7 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({
           className={cn(
             "border-muted-foreground/20 bg-muted/20 cursor-pointer transition-all relative",
             isSelected && "border-blue-500 shadow-[0_0_0_1px_rgb(59,130,246),0_0_20px_rgba(59,130,246,0.5)]",
+            isHighlighted && "border-amber-500 bg-amber-50 shadow-[0_0_0_1px_rgb(245,158,11),0_0_20px_rgba(245,158,11,0.4)]",
             className
           )}
           onClick={(e) => {
@@ -679,6 +683,7 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({
             isError ? "border-destructive/20 bg-destructive/5" : "border-green-500/20 bg-green-500/5",
             "cursor-pointer transition-all relative",
             isSelected && "border-blue-500 shadow-[0_0_0_1px_rgb(59,130,246),0_0_20px_rgba(59,130,246,0.5)]",
+            isHighlighted && "border-amber-500 bg-amber-50 shadow-[0_0_0_1px_rgb(245,158,11),0_0_20px_rgba(245,158,11,0.4)]",
             className
           )}
           onClick={(e) => {
@@ -765,6 +770,7 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({
         className={cn(
           "border-destructive/20 bg-destructive/5 cursor-pointer transition-all relative",
           isSelected && "border-blue-500 shadow-[0_0_0_1px_rgb(59,130,246),0_0_20px_rgba(59,130,246,0.5)]",
+          isHighlighted && "border-amber-500 bg-amber-50 shadow-[0_0_0_1px_rgb(245,158,11),0_0_20px_rgba(245,158,11,0.4)]",
           className
         )}
         onClick={(e) => {
