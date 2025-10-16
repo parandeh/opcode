@@ -51,7 +51,7 @@ export const TableWidget: React.FC<TableWidgetProps> = ({
                   <tr 
                     key={rowIdx} 
                     className={cn(
-                      "border-b border-muted/50 hover:bg-muted/20 transition-colors",
+                      "border-b border-muted/50 hover:bg-muted/60 transition-colors cursor-pointer",
                       rowIdx === data.length - 1 && "border-b-0"
                     )}
                   >
