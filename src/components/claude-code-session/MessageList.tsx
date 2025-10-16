@@ -12,6 +12,8 @@ interface MessageListProps {
   isStreaming: boolean;
   onLinkDetected?: (url: string) => void;
   className?: string;
+  highlightedMessageIndex?: number | null;
+  onClearHighlight?: () => void;
 }
 
 export const MessageList: React.FC<MessageListProps> = React.memo(({
@@ -19,7 +21,9 @@ export const MessageList: React.FC<MessageListProps> = React.memo(({
   projectPath,
   isStreaming,
   onLinkDetected,
-  className
+  className,
+  highlightedMessageIndex,
+  onClearHighlight
 }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const shouldAutoScrollRef = useRef(true);
@@ -56,6 +60,16 @@ export const MessageList: React.FC<MessageListProps> = React.memo(({
     } else if (userHasScrolledRef.current) {
       shouldAutoScrollRef.current = true;
       userHasScrolledRef.current = false;
+    }
+    
+    // Check if highlighted message is still visible and clear highlight if not
+    if (highlightedMessageIndex !== null && onClearHighlight) {
+      const visibleRange = virtualizer.getVirtualItems();
+      const isHighlightedVisible = visibleRange.some(item => item.index === highlightedMessageIndex);
+      
+      if (!isHighlightedVisible) {
+        onClearHighlight();
+      }
     }
   };
 
@@ -110,6 +124,7 @@ export const MessageList: React.FC<MessageListProps> = React.memo(({
             const key = `msg-${virtualItem.index}-${message.type}`;
 
             const isSelected = selectedMessageIndex === virtualItem.index;
+            const isHighlighted = highlightedMessageIndex === virtualItem.index;
             const handleSelect = () => {
               setSelectedMessageIndex(
                 selectedMessageIndex === virtualItem.index ? null : virtualItem.index
@@ -138,6 +153,7 @@ export const MessageList: React.FC<MessageListProps> = React.memo(({
                     onLinkDetected={onLinkDetected}
                     isSelected={isSelected}
                     onSelect={handleSelect}
+                    isHighlighted={isHighlighted}
                   />
                 </div>
               </motion.div>

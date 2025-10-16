@@ -41,9 +41,17 @@ interface TimelineNavigatorProps {
    */
   onCheckpointCreated?: () => void;
   /**
-   * Callback to scroll to a specific message index in the session
+   * Callback to scroll to a checkpoint and highlight it
    */
-  onScrollToMessage?: (messageIndex: number) => void;
+  onScrollToMessage?: (checkpoint: Checkpoint) => void;
+  /**
+   * ID of the currently highlighted checkpoint
+   */
+  highlightedCheckpointId?: string | null;
+  /**
+   * Callback to clear highlighting
+   */
+  onClearHighlight?: () => void;
   className?: string;
 }
 
@@ -60,6 +68,8 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
   refreshVersion = 0,
   onCheckpointCreated,
   onScrollToMessage,
+  highlightedCheckpointId,
+  onClearHighlight,
   className
 }) => {
   const [timeline, setTimeline] = useState<SessionTimeline | null>(null);
@@ -158,9 +168,20 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
   };
 
   const handleScrollToCheckpoint = (checkpoint: Checkpoint) => {
+    console.log("handleScrollToCheckpoint called with:", checkpoint);
+    console.log("checkpoint.messageIndex:", checkpoint.messageIndex);
+    console.log("onScrollToMessage function exists:", !!onScrollToMessage);
+    
     if (onScrollToMessage) {
-      console.log("handleScrollTochex", checkpoint);
-      onScrollToMessage(checkpoint.messageIndex);
+      // Validate messageIndex before scrolling
+      if (typeof checkpoint.messageIndex === 'number' && checkpoint.messageIndex >= 0) {
+        console.log("Calling onScrollToMessage with checkpoint:", checkpoint.id);
+        onScrollToMessage(checkpoint);
+      } else {
+        console.warn('Invalid messageIndex in checkpoint:', checkpoint.messageIndex);
+      }
+    } else {
+      console.warn('onScrollToMessage function not provided');
     }
   };
 
@@ -221,6 +242,7 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
     const hasChildren = node.children.length > 0;
     const isCurrent = timeline?.currentCheckpointId === node.checkpoint.id;
     const isSelected = selectedCheckpoint?.id === node.checkpoint.id;
+    const isHighlighted = highlightedCheckpointId === node.checkpoint.id;
 
     return (
       <div key={node.checkpoint.id} className="relative">
@@ -267,7 +289,8 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
             className={cn(
               "flex-1 cursor-pointer transition-all hover:shadow-md",
               isCurrent && "border-primary ring-2 ring-primary/20",
-              isSelected && "border-blue-500 bg-blue-500/5"
+              isSelected && "border-blue-500 bg-blue-500/5",
+              isHighlighted && "border-amber-500 bg-amber-50 ring-2 ring-amber-500/30"
             )}
             onClick={(e) => {
               e.stopPropagation();
@@ -395,7 +418,7 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
   };
 
   return (
-    <div className={cn("space-y-4", className)}>
+    <div className={cn("h-full flex flex-col space-y-4", className)}>
       {/* Experimental Feature Warning */}
       <div className="rounded-lg border border-yellow-500/50 bg-yellow-500/10 p-3 hidden">
         <div className="flex items-start gap-2">
@@ -410,7 +433,7 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
       </div>
       
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-2">
           <GitBranch className="h-5 w-5 text-muted-foreground" />
           <h3 className="text-sm font-medium">Timeline</h3>
@@ -434,7 +457,7 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
       
       {/* Error display */}
       {error && (
-        <div className="flex items-center gap-2 text-xs text-destructive">
+        <div className="flex items-center gap-2 text-xs text-destructive flex-shrink-0">
           <AlertCircle className="h-3 w-3" />
           {error}
         </div>
@@ -442,11 +465,13 @@ export const TimelineNavigator: React.FC<TimelineNavigatorProps> = ({
       
       {/* Timeline tree */}
       {timeline?.rootNode ? (
-        <div className="relative overflow-x-auto">
+        <div className="relative overflow-x-auto overflow-y-auto flex-1 min-h-0">
           {renderTimelineNode(timeline.rootNode)}
+          {/* Invisible spacer to ensure last item scrolls fully into view */}
+          <div className="h-16 w-full" aria-hidden="true" />
         </div>
       ) : (
-        <div className="text-center py-8 text-sm text-muted-foreground">
+        <div className="text-center py-8 text-sm text-muted-foreground flex-1">
           {isLoading ? "Loading timeline..." : "No checkpoints yet"}
         </div>
       )}
