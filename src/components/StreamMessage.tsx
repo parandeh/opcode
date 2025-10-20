@@ -42,6 +42,7 @@ import {
   WebFetchWidget
 } from "./ToolWidgets";
 import { TableWidget } from "./widgets";
+import { table } from "console";
 
 interface StreamMessageProps {
   message: ClaudeStreamMessage;
@@ -85,6 +86,58 @@ const estimateHumanTime = (message: ClaudeStreamMessage): string => {
     if (leftoverHours > 0 && weeks == 0) result += `${leftoverHours} hr${leftoverHours > 1 ? "s" : ""}`;
     return result.trim() || "0 min";
   }
+};
+
+ // Parse content to separate line numbers from code
+ const parseContent = (rawContent: string) => {
+  if (!rawContent) {
+    return rawContent;
+  }
+  const lines = rawContent.split('\n');
+  const codeLines: string[] = [];
+  let minLineNumber = Infinity;
+
+  // First, determine if the content is likely a numbered list from the 'read' tool.
+  // It is if more than half the non-empty lines match the expected format.
+  const nonEmptyLines = lines.filter(line => line.trim() !== '');
+  if (nonEmptyLines.length === 0) {
+    return rawContent;
+  }
+  const parsableLines = nonEmptyLines.filter(line => /^\s*\d+→/.test(line)).length;
+  const isLikelyNumbered = (parsableLines / nonEmptyLines.length) > 0.5;
+
+  if (!isLikelyNumbered) {
+    return rawContent;
+  }
+  
+  // If it's a numbered list, parse it strictly.
+  for (const line of lines) {
+    // Remove leading whitespace before parsing
+    const trimmedLine = line.trimStart();
+    const match = trimmedLine.match(/^(\d+)→(.*)$/);
+    if (match) {
+      const lineNum = parseInt(match[1], 10);
+      if (minLineNumber === Infinity) {
+        minLineNumber = lineNum;
+      }
+      // Preserve the code content exactly as it appears after the arrow
+      codeLines.push(match[2]);
+    } else if (line.trim() === '') {
+      // Preserve empty lines
+      codeLines.push('');
+    } else {
+      // If a line in a numbered block does not match, it's a formatting anomaly.
+      // Render it as a blank line to avoid showing the raw, un-parsed string.
+      codeLines.push('');
+    }
+  }
+  
+  // Remove trailing empty lines
+  while (codeLines.length > 0 && codeLines[codeLines.length - 1] === '') {
+    codeLines.pop();
+  }
+  
+  return codeLines.join('\n');
 };
 
 /**
@@ -284,9 +337,48 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({
                       // Read tool
                       if (toolName === "read" && input?.file_path) {
                         renderedSomething = true;
+
+                        // If file_path matches eval/scenarios/(.*)/eval-runs/.*.json, extract the scenario id/group
+                        let evalScenarioMatch = input.file_path.match(/eval\/scenarios\/([^\/]+)\/eval-runs\/.*\.json$/);
+                        let evalScenario = evalScenarioMatch ? evalScenarioMatch[1] : null;
+
+                        if (evalScenario !== null) {
+                          let result = toolResult.content
+                          const reminderMatch = result.match(/<system-reminder>(.*?)<\/system-reminder>/s);
+                          if (reminderMatch) {
+                            result = result.substring(0, reminderMatch.index || 0).trim(); // before reminder substring                            
+                          }
+                          let resultContent = parseContent(result);
+                          
+                          // Parse the JSON content to extract table data
+                          try {
+                            const jsonData = JSON.parse(resultContent);
+                            console.log("Tool jsonData: ", jsonData);
+                            if (jsonData.summary && jsonData.evaluation_results && Array.isArray(jsonData.evaluation_results)) {
+                              const tableData = jsonData.evaluation_results;
+                              for (const row of tableData) {
+                                row['success'] = row.result.success ? "✅" : "❌";
+                                row['reason'] = row.result.reason;
+                              }
+                              const columns = ['task', 'final_answer', 'success', 'reason'];
+
+                              return (
+                                <TableWidget
+                                  title={`Reading Evaluation Results ${evalScenario}`}
+                                  columns={columns}
+                                  data={tableData}
+                                />
+                              );
+                            } 
+                          } catch (error) {
+                            console.error("Failed to parse json eval results at ", input.file_path);
+                            // Fallback to regular ReadWidget if JSON parsing fails
+                          }
+                        }
+                        
                         return <ReadWidget filePath={input.file_path} result={toolResult} />;
                       }
-                      
+
                       // Glob tool
                       if (toolName === "glob" && input?.pattern) {
                         renderedSomething = true;
@@ -405,7 +497,7 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({
                             </td>
                           </tr>
                           <tr>
-                            <td className="font-semibold min-w-[6.2rem] text-right pr-2">Est. Human Work</td>
+                            <td className="font-semibold min-w-[6.2rem] text-right pr-2">Est. AI Expert Work</td>
                             <td>{estimateHumanTime(message)}</td>
                           </tr>
                         </tbody>
