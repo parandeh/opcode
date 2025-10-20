@@ -342,7 +342,7 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({
                         let evalScenarioMatch = input.file_path.match(/eval\/scenarios\/([^\/]+)\/eval-runs\/.*\.json$/);
                         let evalScenario = evalScenarioMatch ? evalScenarioMatch[1] : null;
 
-                        if (evalScenario !== null) {
+                        if (evalScenario !== null && toolResult && toolResult.content) {
                           let result = toolResult.content
                           const reminderMatch = result.match(/<system-reminder>(.*?)<\/system-reminder>/s);
                           if (reminderMatch) {
@@ -353,9 +353,14 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({
                           // Parse the JSON content to extract table data
                           try {
                             const jsonData = JSON.parse(resultContent);
-                            console.log("Tool jsonData: ", jsonData);
-                            if (jsonData.summary && jsonData.evaluation_results && Array.isArray(jsonData.evaluation_results)) {
+                            if (jsonData.evaluation_results && Array.isArray(jsonData.evaluation_results)) {
                               const tableData = jsonData.evaluation_results;
+
+                              // ¨Update message usage stats based on reading the file content
+                              if (jsonData.summary && jsonData.summary.total_eval_tokens && message.usage) {
+                                message.usage.eval_tokens = jsonData.summary.total_eval_tokens;
+                              }
+
                               for (const row of tableData) {
                                 row['success'] = row.result.success ? "✅" : "❌";
                                 row['reason'] = row.result.reason;
@@ -364,14 +369,15 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({
 
                               return (
                                 <TableWidget
-                                  title={`Reading Evaluation Results ${evalScenario}`}
+                                  title={`Eval Results for Scenario ${evalScenario} / ${input.file_path.split("/").slice(-1)[0]}`}
                                   columns={columns}
                                   data={tableData}
                                 />
                               );
-                            } 
+                            }
+                            
                           } catch (error) {
-                            console.error("Failed to parse json eval results at ", input.file_path);
+                            // console.error("Failed to parse json eval results at ", input.file_path);
                             // Fallback to regular ReadWidget if JSON parsing fails
                           }
                         }

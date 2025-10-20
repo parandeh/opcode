@@ -76,6 +76,7 @@ export interface ClaudeStreamMessage {
     output_tokens: number;
     cumulative_input_tokens: number;
     cumulative_output_tokens: number;
+    eval_tokens?: number;
   };
   relative_timestamp?: number;
   [key: string]: any;
