@@ -37,7 +37,8 @@ const computeMessageMetadata = (messages: any[]): ClaudeStreamMessage[] => {
   let cumulativeInputTokens = 0;
   let cumulativeOutputTokens = 0;
   let firstTimestamp: number | null = null;
-  
+  let prevMessage: ClaudeStreamMessage | null = null;
+
   console.log(`Calculating cumulatives for ${messages.length} messages`);
 
   for (const messageData of messages) {
@@ -45,41 +46,45 @@ const computeMessageMetadata = (messages: any[]): ClaudeStreamMessage[] => {
       ...messageData,
       type: messageData.type || "assistant"
     };
-    
-    // Extract tokens from message - check both locations where they might be stored
-    let messageInputTokens = 0;
-    let messageOutputTokens = 0;
-    
-    if (message.message?.usage) {
-      messageInputTokens = message.message.usage.input_tokens || 0;
-      messageInputTokens += message.message.usage.cache_creation_input_tokens || 0;
-      messageOutputTokens = message.message.usage.output_tokens || 0;
-    } else if (message.usage) {
-      messageInputTokens = message.usage.input_tokens || 0;
-      messageInputTokens += message.usage.cache_creation_input_tokens || 0;
-      messageOutputTokens = message.usage.output_tokens || 0;
-    }
-    
-    // Update cumulative totals
-    cumulativeInputTokens += messageInputTokens;
-    cumulativeOutputTokens += messageOutputTokens;
-    
-    // Add cumulative tokens to usage object
-    if (!message.usage) {
-      message.usage = {
-        input_tokens: messageInputTokens,
-        output_tokens: messageOutputTokens,
-        cumulative_input_tokens: cumulativeInputTokens,
-        cumulative_output_tokens: cumulativeOutputTokens
-      };
+
+    if (prevMessage && prevMessage.message && prevMessage.message?.id && message.message && message.message?.id && message.message.id === prevMessage.message.id) {
+      message.usage = prevMessage.usage;
+      prevMessage.usage = undefined;
     } else {
-      message.usage.cumulative_input_tokens = cumulativeInputTokens;
-      message.usage.cumulative_output_tokens = cumulativeOutputTokens;
+      // Extract tokens from message - check both locations where they might be stored
+      let messageInputTokens = 0;
+      let messageOutputTokens = 0;
+
+      if (message.message?.usage) {
+        messageInputTokens = message.message.usage.input_tokens || 0;
+        messageInputTokens += message.message.usage.cache_creation_input_tokens || 0;
+        messageOutputTokens = message.message.usage.output_tokens || 0;
+      } else if (message.usage) {
+        messageInputTokens = message.usage.input_tokens || 0;
+        messageInputTokens += message.usage.cache_creation_input_tokens || 0;
+        messageOutputTokens = message.usage.output_tokens || 0;
+      }
+
+      // Update cumulative totals
+      cumulativeInputTokens += messageInputTokens;
+      cumulativeOutputTokens += messageOutputTokens;
+
+      if (!message.usage) {
+        message.usage = {
+          input_tokens: messageInputTokens,
+          output_tokens: messageOutputTokens,
+          cumulative_input_tokens: cumulativeInputTokens,
+          cumulative_output_tokens: cumulativeOutputTokens
+        };
+      } else {
+        message.usage.cumulative_input_tokens = cumulativeInputTokens;
+        message.usage.cumulative_output_tokens = cumulativeOutputTokens;
+      }
     }
     
     // Compute relative timestamp
     const messageTimestamp = message.timestamp ? new Date(message.timestamp).getTime() : Date.now();
-    
+
     if (firstTimestamp === null) {
       firstTimestamp = messageTimestamp;
       message.relative_timestamp = 0;
@@ -87,7 +92,7 @@ const computeMessageMetadata = (messages: any[]): ClaudeStreamMessage[] => {
       message.relative_timestamp = (messageTimestamp - firstTimestamp) / 1000;
     }
     
-    console.log(`Msg rel ts ${message.relative_timestamp}`)
+    prevMessage = message;
 
     processedMessages.push(message);
   }

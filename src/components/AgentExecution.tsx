@@ -63,6 +63,7 @@ export interface ClaudeStreamMessage {
   subtype?: string;
   message?: {
     content?: any[];
+    id?: string;
     usage?: {
       input_tokens: number;
       cache_creation_input_tokens?: number;

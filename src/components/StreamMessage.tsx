@@ -14,6 +14,7 @@ import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { getClaudeSyntaxTheme } from "@/lib/claudeSyntaxTheme";
 import { useTheme } from "@/hooks";
 import type { ClaudeStreamMessage } from "./AgentExecution";
+
 import {
   TodoWidget,
   TodoReadWidget,
@@ -51,6 +52,40 @@ interface StreamMessageProps {
   onSelect?: () => void;
   isHighlighted?: boolean;
 }
+
+
+/**
+ * Estimates human time based on token usage
+ * @param message - The message object containing usage information
+ * @returns A formatted string representing estimated human time
+ */
+const estimateHumanTime = (message: ClaudeStreamMessage): string => {
+  if (!message.usage) return "0 min";
+  
+  const totalMinutes = Math.round(
+    (message.usage.cumulative_input_tokens / 100 + message.usage.cumulative_output_tokens / 50)
+  );
+  
+  if (totalMinutes < 60) {
+    return `${totalMinutes} min`;
+  } else if (totalMinutes < 8 * 60) {
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    return `${hours} hr${hours !== 1 ? 's' : ''}${minutes > 0 ? ` ${minutes} min` : ""}`;
+  } else {
+    // Now calculate in days of 8 hours and weeks of 5 days
+    const totalHours = totalMinutes / 60;
+    const totalEighthours = totalHours / 8;
+    const weeks = Math.floor(totalEighthours / 5);
+    const days = Math.floor(totalEighthours) % 5;
+    const leftoverHours = Math.floor(totalHours) % 8;
+    let result = "";
+    if (weeks > 0) result += `${weeks} week${weeks > 1 ? "s" : ""} `;
+    if (days > 0) result += `${days} day${days > 1 ? "s" : ""} `;
+    if (leftoverHours > 0 && weeks == 0) result += `${leftoverHours} hr${leftoverHours > 1 ? "s" : ""}`;
+    return result.trim() || "0 min";
+  }
+};
 
 /**
  * Component to render a single Claude Code stream message
@@ -357,11 +392,26 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({
                   
                   return null;
                 })}
-                
-                {msg.usage && (
-                  <div className="text-xs text-muted-foreground mt-2">
-                    Tokens: {msg.usage.input_tokens} in, {msg.usage.output_tokens} out
-                  </div>
+
+
+                {message.usage && message.relative_timestamp && (
+                  <>
+                    <div className="flex flex-col items-end">
+                      <table className="text-xs text-muted-foreground bg-muted/30 rounded p-1 px-2">
+                        <tbody>
+                          <tr>
+                            <td className="font-semibold min-w-[6.2rem] text-right pr-2">Elapsed Time</td>
+                            <td>{`${Math.round(Number(message.relative_timestamp) / 60)} min`}
+                            </td>
+                          </tr>
+                          <tr>
+                            <td className="font-semibold min-w-[6.2rem] text-right pr-2">Est. Human Work</td>
+                            <td>{estimateHumanTime(message)}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
                 )}
               </div>
             </div>
@@ -785,8 +835,8 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({
                   )}
                   {message.usage && (
                     <div>
-                      Total tokens: {message.usage.input_tokens + message.usage.output_tokens} 
-                      ({message.usage.input_tokens} in, {message.usage.output_tokens} out)
+                      Total tokens: {message.usage.cumulative_input_tokens + message.usage.cumulative_output_tokens} 
+                      ({message.usage.cumulative_input_tokens} in, {message.usage.cumulative_output_tokens} out)
                     </div>
                   )}
                 </div>
