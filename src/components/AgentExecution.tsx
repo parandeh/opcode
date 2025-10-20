@@ -65,13 +65,18 @@ export interface ClaudeStreamMessage {
     content?: any[];
     usage?: {
       input_tokens: number;
+      cache_creation_input_tokens?: number;
       output_tokens: number;
     };
   };
   usage?: {
     input_tokens: number;
+    cache_creation_input_tokens?: number;
     output_tokens: number;
+    cumulative_input_tokens: number;
+    cumulative_output_tokens: number;
   };
+  relative_timestamp?: number;
   [key: string]: any;
 }
 

@@ -33,9 +33,72 @@ export interface ClaudeStreamMessage {
   usage?: {
     input_tokens: number;
     output_tokens: number;
+    cumulative_input_tokens: number;
+    cumulative_output_tokens: number;
   };
+  relative_timestamp?: number;
   [key: string]: any;
 }
+
+// Helper function to compute cumulative tokens and relative timestamps
+const computeMessageMetadata = (messages: any[]): ClaudeStreamMessage[] => {
+  const processedMessages: ClaudeStreamMessage[] = [];
+  let cumulativeInputTokens = 0;
+  let cumulativeOutputTokens = 0;
+  let firstTimestamp: number | null = null;
+  
+  console.log(`Calculating cumulatives for ${messages.length} messages`);
+
+  for (const messageData of messages) {
+    const message: ClaudeStreamMessage = {
+      ...messageData,
+      type: messageData.type || "assistant"
+    };
+    
+    // Extract tokens from message - check both locations where they might be stored
+    let messageInputTokens = 0;
+    let messageOutputTokens = 0;
+    
+    if (message.message?.usage) {
+      messageInputTokens = message.message.usage.input_tokens || 0;
+      messageOutputTokens = message.message.usage.output_tokens || 0;
+    } else if (message.usage) {
+      messageInputTokens = message.usage.input_tokens || 0;
+      messageOutputTokens = message.usage.output_tokens || 0;
+    }
+    
+    // Update cumulative totals
+    cumulativeInputTokens += messageInputTokens;
+    cumulativeOutputTokens += messageOutputTokens;
+    
+    // Add cumulative tokens to usage object
+    if (!message.usage) {
+      message.usage = {
+        input_tokens: messageInputTokens,
+        output_tokens: messageOutputTokens,
+        cumulative_input_tokens: cumulativeInputTokens,
+        cumulative_output_tokens: cumulativeOutputTokens
+      };
+    } else {
+      message.usage.cumulative_input_tokens = cumulativeInputTokens;
+      message.usage.cumulative_output_tokens = cumulativeOutputTokens;
+    }
+    
+    // Compute relative timestamp
+    const messageTimestamp = message.timestamp ? new Date(message.timestamp).getTime() : Date.now();
+    
+    if (firstTimestamp === null) {
+      firstTimestamp = messageTimestamp;
+      message.relative_timestamp = 0;
+    } else {
+      message.relative_timestamp = messageTimestamp - firstTimestamp;
+    }
+    
+    processedMessages.push(message);
+  }
+  
+  return processedMessages;
+};
 
 export function SessionOutputViewer({ session, onClose, className }: SessionOutputViewerProps) {
   const [messages, setMessages] = useState<ClaudeStreamMessage[]>([]);
@@ -115,12 +178,11 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
         try {
           const history = await api.loadAgentSessionHistory(session.session_id);
           
-          // Convert history to messages format using AgentExecution style
-          const loadedMessages: ClaudeStreamMessage[] = history.map(entry => ({
-            ...entry,
-            type: entry.type || "assistant"
-          }));
+          // Convert history to messages format and compute metadata
+          const loadedMessages = computeMessageMetadata(history);
           
+          console.log("Loaded messages from history")
+
           setMessages(loadedMessages);
           setRawJsonlOutput(history.map(h => JSON.stringify(h)));
           
@@ -156,15 +218,17 @@ export function SessionOutputViewer({ session, onClose, className }: SessionOutp
       const jsonlLines = rawOutput.split('\n').filter(line => line.trim());
       setRawJsonlOutput(jsonlLines);
       
-      const parsedMessages: ClaudeStreamMessage[] = [];
+      // Parse JSONL lines and compute metadata
+      const rawMessages = [];
       for (const line of jsonlLines) {
         try {
-          const message = JSON.parse(line) as ClaudeStreamMessage;
-          parsedMessages.push(message);
+          const message = JSON.parse(line);
+          rawMessages.push(message);
         } catch (err) {
           console.error("Failed to parse message:", err, line);
         }
       }
+      const parsedMessages = computeMessageMetadata(rawMessages);
       setMessages(parsedMessages);
       
       // Update cache

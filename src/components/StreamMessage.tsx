@@ -359,7 +359,7 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({
                 })}
                 
                 {msg.usage && (
-                  <div className="text-xs text-muted-foreground mt-2 hidden">
+                  <div className="text-xs text-muted-foreground mt-2">
                     Tokens: {msg.usage.input_tokens} in, {msg.usage.output_tokens} out
                   </div>
                 )}
@@ -386,11 +386,17 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({
       const renderedCard = (
         <Card
           className={cn(
-            "border-muted-foreground/20 bg-muted/20 cursor-pointer transition-all relative",
+            "border-muted-foreground/20 cursor-pointer transition-all relative",
             isSelected && "border-blue-500 shadow-[0_0_0_1px_rgb(59,130,246),0_0_20px_rgba(59,130,246,0.5)]",
             isHighlighted && "border-amber-500 bg-amber-50 shadow-[0_0_0_1px_rgb(245,158,11),0_0_20px_rgba(245,158,11,0.4)]",
             className
           )}
+          style={{
+            borderColor: "var(--color-border)",
+            backgroundColor: "rgb(3, 162, 233)",  
+            color: "var(--color-card-foreground)"
+          }}
+          data-theme="user-message"
           onClick={(e) => {
             e.stopPropagation();
             onSelect?.();
@@ -398,7 +404,7 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({
         >
           <CardContent className="p-4">
             <div className="flex items-start gap-3">
-              <User className="h-5 w-5 text-muted-foreground mt-0.5" />
+              <User className="h-5 w-5 text-foreground mt-0.5" />
               <div className="flex-1 space-y-2 min-w-0">
                 {/* Handle content that is a simple string (e.g. from user commands) */}
                 {(typeof msg.content === 'string' || (msg.content && !Array.isArray(msg.content))) && (
