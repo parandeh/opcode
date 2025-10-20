@@ -64,7 +64,7 @@ const estimateHumanTime = (message: ClaudeStreamMessage): string => {
   if (!message.usage) return "0 min";
   
   const totalMinutes = Math.round(
-    (message.usage.cumulative_input_tokens / 100 + message.usage.cumulative_output_tokens / 50)
+    (message.usage.cumulative_input_tokens / 100 + message.usage.cumulative_output_tokens / 10)
   );
   
   if (totalMinutes < 60) {
@@ -494,7 +494,7 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({
 
                 {message.usage && message.relative_timestamp && (
                   <>
-                    <div className="flex flex-col items-end">
+                    <div className="flex flex-col items-end hidden">
                       <table className="text-xs text-muted-foreground bg-muted/30 rounded p-1 px-2">
                         <tbody>
                           <tr>
@@ -503,9 +503,18 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({
                             </td>
                           </tr>
                           <tr>
-                            <td className="font-semibold min-w-[6.2rem] text-right pr-2">Est. AI Expert Work</td>
+                            <td className="font-semibold min-w-[6.2rem] text-right pr-2">Est. Expert AI Engineer Time</td>
                             <td>{estimateHumanTime(message)}</td>
                           </tr>
+                          <tr>
+                            <td className="font-semibold min-w-[6.2rem] text-right pr-2">Input tokens</td>
+                            <td>{message.usage.cumulative_input_tokens}</td>
+                          </tr>
+                          <tr>
+                            <td className="font-semibold min-w-[6.2rem] text-right pr-2">Output tokens</td>
+                            <td>{message.usage.cumulative_output_tokens}</td>
+                          </tr>
+
                         </tbody>
                       </table>
                     </div>
