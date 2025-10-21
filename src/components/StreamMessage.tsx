@@ -366,12 +366,12 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({
                                 row['reason'] = row.result.reason;
                               }
                               const columns = ['task', 'final_answer', 'success', 'reason'];
-
                               return (
                                 <TableWidget
-                                  title={`Eval Results for Scenario ${evalScenario} / ${input.file_path.split("/").slice(-1)[0]}`}
+                                  title={`Reading eval results for scenario: ${evalScenario} / ${input.file_path.split("/").slice(-1)[0]}`}
                                   columns={columns}
                                   data={tableData}
+                                  isExpanded={false}
                                 />
                               );
                             }

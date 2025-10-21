@@ -2460,7 +2460,7 @@ export const WebFetchWidget: React.FC<{
   }
   
   // Truncate content for preview
-  const maxPreviewLength = 500;
+  const maxPreviewLength = 1000;
   const isTruncated = fetchedContent.length > maxPreviewLength;
   const previewContent = isTruncated && !showFullContent
     ? fetchedContent.substring(0, maxPreviewLength) + '...'
