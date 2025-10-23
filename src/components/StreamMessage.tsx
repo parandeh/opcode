@@ -492,7 +492,7 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({
                 })}
 
 
-                {message.usage && message.relative_timestamp && (
+                {/* {message.usage && message.relative_timestamp && (
                   <>
                     <div className="flex flex-col items-end hidden">
                       <table className="text-xs text-muted-foreground bg-muted/30 rounded p-1 px-2">
@@ -519,7 +519,7 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({
                       </table>
                     </div>
                   </>
-                )}
+                )} */}
               </div>
             </div>
           </CardContent>
@@ -548,11 +548,11 @@ const StreamMessageComponent: React.FC<StreamMessageProps> = ({
             isHighlighted && "border-amber-500 bg-amber-50 shadow-[0_0_0_1px_rgb(245,158,11),0_0_20px_rgba(245,158,11,0.4)]",
             className
           )}
-          style={{
+          style={message.toolUseResult === undefined ? {
             borderColor: "var(--color-border)",
             backgroundColor: "rgb(3, 162, 233)",  
             color: "var(--color-card-foreground)"
-          }}
+          } : undefined}
           data-theme="user-message"
           onClick={(e) => {
             e.stopPropagation();
